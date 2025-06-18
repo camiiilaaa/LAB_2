@@ -1,0 +1,1595 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/MarkerCluster.css">
+        <link rel="stylesheet" href="css/MarkerCluster.Default.css">
+        <link rel="stylesheet" href="css/leaflet-control-geocoder.Geocoder.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/multi-style-layer.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet-control-geocoder.Geocoder.js"></script>
+        <script src="js/proj4.js"></script>
+        <script src="js/proj4leaflet.js"></script>
+        <script src="js/leaflet.markercluster.js"></script>
+        <script src="data/comuna_UTM_1.js"></script>
+        <script src="data/COMUNAS_v1_2.js"></script>
+        <script src="data/Indicadores_barrios_AMC_3.js"></script>
+        <script src="data/sitiosturisticos_4.js"></script>
+        <script>
+        var highlightLayer;
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+            highlightLayer.openPopup();
+        }
+        var crs = new L.Proj.CRS('EPSG:32718', '+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs', {
+            resolutions: [2800, 1400, 700, 350, 175, 84, 42, 21, 11.2, 5.6, 2.8, 1.4, 0.7, 0.35, 0.14, 0.07],
+        });
+        var map = L.map('map', {
+            crs: crs,
+            continuousWorld: false,
+            worldCopyJump: false, 
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[-37.52673339858349,-74.80104642649192],[-36.260702164837845,-71.8688850924096]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // add class to format popup if it contains media
+		function addClassToPopupIfMedia(content, popup) {
+			var tempDiv = document.createElement('div');
+			tempDiv.innerHTML = content;
+			if (tempDiv.querySelector('td img')) {
+				popup._contentNode.classList.add('media');
+					// Delay to force the redraw
+					setTimeout(function() {
+						popup.update();
+					}, 10);
+			} else {
+				popup._contentNode.classList.remove('media');
+			}
+		}
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_OSMStandard_0');
+        map.getPane('pane_OSMStandard_0').style.zIndex = 400;
+        var layer_OSMStandard_0 = L.tileLayer('http://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            pane: 'pane_OSMStandard_0',
+            opacity: 1.0,
+            attribution: '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, CC-BY-SA</a>',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 19
+        });
+        layer_OSMStandard_0;
+        map.addLayer(layer_OSMStandard_0);
+        function pop_comuna_UTM_1(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['CUT_REG'] !== null ? autolinker.link(String(feature.properties['CUT_REG']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['CUT_PROV'] !== null ? autolinker.link(String(feature.properties['CUT_PROV']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['CUT_COM'] !== null ? autolinker.link(String(feature.properties['CUT_COM']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['REGION'] !== null ? autolinker.link(String(feature.properties['REGION']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['PROVINCIA'] !== null ? autolinker.link(String(feature.properties['PROVINCIA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['COMUNA'] !== null ? autolinker.link(String(feature.properties['COMUNA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['SUPERFICIE'] !== null ? autolinker.link(String(feature.properties['SUPERFICIE']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_comuna_UTM_1_0() {
+            return {
+                pane: 'pane_comuna_UTM_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(190,207,80,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_comuna_UTM_1');
+        map.getPane('pane_comuna_UTM_1').style.zIndex = 401;
+        map.getPane('pane_comuna_UTM_1').style['mix-blend-mode'] = 'normal';
+        var layer_comuna_UTM_1 = new L.geoJson(json_comuna_UTM_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_comuna_UTM_1',
+            layerName: 'layer_comuna_UTM_1',
+            pane: 'pane_comuna_UTM_1',
+            onEachFeature: pop_comuna_UTM_1,
+            style: style_comuna_UTM_1_0,
+        });
+        bounds_group.addLayer(layer_comuna_UTM_1);
+        map.addLayer(layer_comuna_UTM_1);
+        function pop_COMUNAS_v1_2(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['CUT_REG'] !== null ? autolinker.link(String(feature.properties['CUT_REG']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['CUT_PROV'] !== null ? autolinker.link(String(feature.properties['CUT_PROV']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['CUT_COM'] !== null ? autolinker.link(String(feature.properties['CUT_COM']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['REGION'] !== null ? autolinker.link(String(feature.properties['REGION']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['PROVINCIA'] !== null ? autolinker.link(String(feature.properties['PROVINCIA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['COMUNA'] !== null ? autolinker.link(String(feature.properties['COMUNA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['SUPERFICIE'] !== null ? autolinker.link(String(feature.properties['SUPERFICIE']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_COMUNAS_v1_2_0() {
+            return {
+                pane: 'pane_COMUNAS_v1_2',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(240,163,214,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_COMUNAS_v1_2');
+        map.getPane('pane_COMUNAS_v1_2').style.zIndex = 402;
+        map.getPane('pane_COMUNAS_v1_2').style['mix-blend-mode'] = 'normal';
+        var layer_COMUNAS_v1_2 = new L.geoJson(json_COMUNAS_v1_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_COMUNAS_v1_2',
+            layerName: 'layer_COMUNAS_v1_2',
+            pane: 'pane_COMUNAS_v1_2',
+            onEachFeature: pop_COMUNAS_v1_2,
+            style: style_COMUNAS_v1_2_0,
+        });
+        bounds_group.addLayer(layer_COMUNAS_v1_2);
+        map.addLayer(layer_COMUNAS_v1_2);
+        function pop_Indicadores_barrios_AMC_3(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Id'] !== null ? autolinker.link(String(feature.properties['Id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Nombre'] !== null ? autolinker.link(String(feature.properties['Nombre']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Area'] !== null ? autolinker.link(String(feature.properties['Area']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['hab_m2'] !== null ? autolinker.link(String(feature.properties['hab_m2']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Sum_Poblac'] !== null ? autolinker.link(String(feature.properties['Sum_Poblac']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['av_hab'] !== null ? autolinker.link(String(feature.properties['av_hab']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Long_tLic'] !== null ? autolinker.link(String(feature.properties['Long_tLic']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Long_tNLic'] !== null ? autolinker.link(String(feature.properties['Long_tNLic']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Suma_Trans'] !== null ? autolinker.link(String(feature.properties['Suma_Trans']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['porc_cober'] !== null ? autolinker.link(String(feature.properties['porc_cober']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Distance'] !== null ? autolinker.link(String(feature.properties['Distance']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['LongcicloK'] !== null ? autolinker.link(String(feature.properties['LongcicloK']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Long_rvial'] !== null ? autolinker.link(String(feature.properties['Long_rvial']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#87ef4b',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#d51532',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#6bdb63',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#9e1aea',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#7cdeed',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#312bec',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#48a2e6',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#dd83c8',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#e03c1f',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#12df42',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#3dd6bd',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#c6c97a',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#d73a81',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#acd953',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#dd42e8',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#efc349',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#d7a378',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#8859e7',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#6482d2',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#87ef4b',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#d51532',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#6bdb63',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#9e1aea',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#7cdeed',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#312bec',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#48a2e6',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#dd83c8',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#e03c1f',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#12df42',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#3dd6bd',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#c6c97a',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#d73a81',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#acd953',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#dd42e8',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#efc349',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#d7a378',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#8859e7',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        var pattern_Indicadores_barrios_AMC_3_0 = new L.StripePattern({
+            weight: 0.3,
+            spaceWeight: 2.0,
+            color: '#6482d2',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_Indicadores_barrios_AMC_3_0.addTo(map);
+        function style_Indicadores_barrios_AMC_3_0(feature) {
+            switch(String(feature.properties['Nombre'])) {
+                case 'Aguita de la Perdiz':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Barrio Universitario':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Bellavista':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Collao':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Concepción Centro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Coronel centro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'David Fuentes':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'El Morro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Las Tres Pascualas':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Lo Mendez':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Lo Rojas':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Lota Alto':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Lota Bajo':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Penco Centro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Plaza Perú':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'San Pedro del Valle':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Talcahuano Centro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Tomé Centro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+                case 'Villa  Nonguén':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_Indicadores_barrios_AMC_3_0,
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        function style_Indicadores_barrios_AMC_3_1(feature) {
+            switch(String(feature.properties['Nombre'])) {
+                case 'Aguita de la Perdiz':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(135,239,75,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Barrio Universitario':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(213,21,50,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Bellavista':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(107,219,99,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Collao':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(158,26,234,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Concepción Centro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(124,222,237,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Coronel centro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(49,43,236,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'David Fuentes':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(72,162,230,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'El Morro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(221,131,200,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Las Tres Pascualas':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(224,60,31,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Lo Mendez':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(18,223,66,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Lo Rojas':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(61,214,189,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Lota Alto':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(198,201,122,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Lota Bajo':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(215,58,129,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Penco Centro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(172,217,83,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Plaza Perú':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(221,66,232,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'San Pedro del Valle':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(239,195,73,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Talcahuano Centro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(215,163,120,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Tomé Centro':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(136,89,231,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'Villa  Nonguén':
+                    return {
+                pane: 'pane_Indicadores_barrios_AMC_3',
+                opacity: 1,
+                color: 'rgba(100,130,210,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Indicadores_barrios_AMC_3');
+        map.getPane('pane_Indicadores_barrios_AMC_3').style.zIndex = 403;
+        map.getPane('pane_Indicadores_barrios_AMC_3').style['mix-blend-mode'] = 'normal';
+        var layer_Indicadores_barrios_AMC_3 = new L.geoJson.multiStyle(json_Indicadores_barrios_AMC_3, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Indicadores_barrios_AMC_3',
+            layerName: 'layer_Indicadores_barrios_AMC_3',
+            pane: 'pane_Indicadores_barrios_AMC_3',
+            onEachFeature: pop_Indicadores_barrios_AMC_3,
+            styles: [style_Indicadores_barrios_AMC_3_0,style_Indicadores_barrios_AMC_3_1,]
+        });
+        bounds_group.addLayer(layer_Indicadores_barrios_AMC_3);
+        map.addLayer(layer_Indicadores_barrios_AMC_3);
+        function pop_sitiosturisticos_4(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['id'] !== null ? autolinker.link(String(feature.properties['id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Nombre</th>\
+                        <td>' + (feature.properties['Nombre'] !== null ? autolinker.link(String(feature.properties['Nombre']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Comúna</th>\
+                        <td>' + (feature.properties['Comúna'] !== null ? autolinker.link(String(feature.properties['Comúna']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Sum_poblac</th>\
+                        <td>' + (feature.properties['Sum_poblac'] !== null ? autolinker.link(String(feature.properties['Sum_poblac']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">cord_x</th>\
+                        <td>' + (feature.properties['cord_x'] !== null ? autolinker.link(String(feature.properties['cord_x']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">cord_y</th>\
+                        <td>' + (feature.properties['cord_y'] !== null ? autolinker.link(String(feature.properties['cord_y']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">video</th>\
+                        <td>' + (feature.properties['video'] !== null ? autolinker.link(String(feature.properties['video']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['inicio'] !== null ? autolinker.link(String(feature.properties['inicio']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_sitiosturisticos_4_0(feature) {
+            switch(String(feature.properties['Nombre'])) {
+                case 'El Morro Talcah':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(128,67,36,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(172,91,49,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Estadio Ester Roa':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(179,92,21,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(247,128,30,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Laguna las tres pascualas':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(72,123,182,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Laguna lo Mendez':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(72,123,182,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Mercado Talcah':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(179,93,142,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(242,125,191,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'museo chiflon del diablo':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(117,58,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(149,74,162,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'museo historico Lota':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(117,58,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(149,74,162,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Parque ecuador':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 6.4,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Parque san pedro':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 6.4,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Plaza Bellavista':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Plaza de Armas ccp':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'plaza de armas coronel':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Plaza de armas Lota':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Plaza de Armas Penco':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Plaza de Armas Talcah':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Plaza Peru':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Plaza Tomé':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'temoelectrica bocamina':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(128,17,25,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(219,30,42,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Udec':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(247,225,55,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(250,255,57,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Zoo':
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(61,128,53,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(84,176,74,1.0)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_sitiosturisticos_4',
+                radius: 4.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(159,238,31,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_sitiosturisticos_4');
+        map.getPane('pane_sitiosturisticos_4').style.zIndex = 404;
+        map.getPane('pane_sitiosturisticos_4').style['mix-blend-mode'] = 'normal';
+        var layer_sitiosturisticos_4 = new L.geoJson(json_sitiosturisticos_4, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_sitiosturisticos_4',
+            layerName: 'layer_sitiosturisticos_4',
+            pane: 'pane_sitiosturisticos_4',
+            onEachFeature: pop_sitiosturisticos_4,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.circleMarker(latlng, style_sitiosturisticos_4_0(feature));
+            },
+        });
+        var cluster_sitiosturisticos_4 = new L.MarkerClusterGroup({showCoverageOnHover: false,
+            spiderfyDistanceMultiplier: 2});
+        cluster_sitiosturisticos_4.addLayer(layer_sitiosturisticos_4);
+
+        bounds_group.addLayer(layer_sitiosturisticos_4);
+        cluster_sitiosturisticos_4.addTo(map);
+        var osmGeocoder = new L.Control.Geocoder({
+            collapsed: true,
+            position: 'topleft',
+            text: 'Search',
+            title: 'Testing'
+        }).addTo(map);
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .className += ' fa fa-search';
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .title += 'Search for a place';
+        var overlaysTree = [
+            {label: 'sitios turisticos<br /><table><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_ElMorroTalcah0.png" /></td><td>El Morro Talcah</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_EstadioEsterRoa1.png" /></td><td>Estadio Ester Roa</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_Lagunalastrespascualas2.png" /></td><td>Laguna las tres pascualas</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_LagunaloMendez3.png" /></td><td>Laguna lo Mendez</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_MercadoTalcah4.png" /></td><td>Mercado Talcah</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_museochiflondeldiablo5.png" /></td><td>museo chiflon del diablo</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_museohistoricoLota6.png" /></td><td>museo historico Lota</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_Parqueecuador7.png" /></td><td>Parque ecuador</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_Parquesanpedro8.png" /></td><td>Parque san pedro</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_PlazaBellavista9.png" /></td><td>Plaza Bellavista</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_PlazadeArmasccp10.png" /></td><td>Plaza de Armas ccp</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_plazadearmascoronel11.png" /></td><td>plaza de armas coronel</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_PlazadearmasLota12.png" /></td><td>Plaza de armas Lota</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_PlazadeArmasPenco13.png" /></td><td>Plaza de Armas Penco</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_PlazadeArmasTalcah14.png" /></td><td>Plaza de Armas Talcah</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_PlazaPeru15.png" /></td><td>Plaza Peru</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_PlazaTomé16.png" /></td><td>Plaza Tomé</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_temoelectricabocamina17.png" /></td><td>temoelectrica bocamina</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_Udec18.png" /></td><td>Udec</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_Zoo19.png" /></td><td>Zoo</td></tr><tr><td style="text-align: center;"><img src="legend/sitiosturisticos_4_20.png" /></td><td></td></tr></table>', layer: cluster_sitiosturisticos_4},
+            {label: 'Indicadores_barrios_AMC<br /><table><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_AguitadelaPerdiz0.png" /></td><td>Aguita de la Perdiz</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_BarrioUniversitario1.png" /></td><td>Barrio Universitario</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_Bellavista2.png" /></td><td>Bellavista</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_Collao3.png" /></td><td>Collao</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_ConcepciónCentro4.png" /></td><td>Concepción Centro</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_Coronelcentro5.png" /></td><td>Coronel centro</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_DavidFuentes6.png" /></td><td>David Fuentes</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_ElMorro7.png" /></td><td>El Morro</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_LasTresPascualas8.png" /></td><td>Las Tres Pascualas</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_LoMendez9.png" /></td><td>Lo Mendez</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_LoRojas10.png" /></td><td>Lo Rojas</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_LotaAlto11.png" /></td><td>Lota Alto</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_LotaBajo12.png" /></td><td>Lota Bajo</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_PencoCentro13.png" /></td><td>Penco Centro</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_PlazaPerú14.png" /></td><td>Plaza Perú</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_SanPedrodelValle15.png" /></td><td>San Pedro del Valle</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_TalcahuanoCentro16.png" /></td><td>Talcahuano Centro</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_ToméCentro17.png" /></td><td>Tomé Centro</td></tr><tr><td style="text-align: center;"><img src="legend/Indicadores_barrios_AMC_3_VillaNonguén18.png" /></td><td>Villa  Nonguén</td></tr></table>', layer: layer_Indicadores_barrios_AMC_3},
+            {label: '<img src="legend/COMUNAS_v1_2.png" /> COMUNAS_v1', layer: layer_COMUNAS_v1_2},
+            {label: '<img src="legend/comuna_UTM_1.png" /> comuna_UTM', layer: layer_comuna_UTM_1},
+            {label: "OSM Standard", layer: layer_OSMStandard_0, radioGroup: 'bm' },]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: false,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+            collapsed: false, 
+        });
+        lay.addTo(map);
+		document.addEventListener("DOMContentLoaded", function() {
+            // set new Layers List height which considers toggle icon
+            function newLayersListHeight() {
+                var layerScrollbarElement = document.querySelector('.leaflet-control-layers-scrollbar');
+                if (layerScrollbarElement) {
+                    var layersListElement = document.querySelector('.leaflet-control-layers-list');
+                    var originalHeight = layersListElement.style.height 
+                        || window.getComputedStyle(layersListElement).height;
+                    var newHeight = parseFloat(originalHeight) - 50;
+                    layersListElement.style.height = newHeight + 'px';
+                }
+            }
+            var isLayersListExpanded = true;
+            var controlLayersElement = document.querySelector('.leaflet-control-layers');
+            var toggleLayerControl = document.querySelector('.leaflet-control-layers-toggle');
+            // toggle Collapsed/Expanded and apply new Layers List height
+            toggleLayerControl.addEventListener('click', function() {
+                if (isLayersListExpanded) {
+                    controlLayersElement.classList.remove('leaflet-control-layers-expanded');
+                } else {
+                    controlLayersElement.classList.add('leaflet-control-layers-expanded');
+                }
+                isLayersListExpanded = !isLayersListExpanded;
+                newLayersListHeight()
+            });	
+			// apply new Layers List height if toggle layerstree
+			if (controlLayersElement) {
+				controlLayersElement.addEventListener('click', function(event) {
+					var toggleLayerHeaderPointer = event.target.closest('.leaflet-layerstree-header-pointer span');
+					if (toggleLayerHeaderPointer) {
+						newLayersListHeight();
+					}
+				});
+			}
+            // Collapsed/Expanded at Start to apply new height
+            setTimeout(function() {
+                toggleLayerControl.click();
+            }, 10);
+            setTimeout(function() {
+                toggleLayerControl.click();
+            }, 10);
+            // Collapsed touch/small screen
+            var isSmallScreen = window.innerWidth < 650;
+            if (isSmallScreen) {
+                setTimeout(function() {
+                    controlLayersElement.classList.remove('leaflet-control-layers-expanded');
+                    isLayersListExpanded = !isLayersListExpanded;
+                }, 500);
+            }  
+        });       
+        setBounds();
+        </script>
+    </body>
+</html>
